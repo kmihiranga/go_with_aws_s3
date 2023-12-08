@@ -5,3 +5,10 @@
 * Then create a .env file and add all variables mentioned in the .env.example file
 
 * Note: before automate this, you should only have less than 5 versions in your policy. other than that it will throw an error from aws side.
+
+* you can add a new bucket name that is not existing inside your S3 bucket.
+
+* After run this command.
+    ```bash
+        go run main.go
+    ```
