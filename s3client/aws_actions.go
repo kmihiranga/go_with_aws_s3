@@ -89,3 +89,6 @@ func CreatePolicyVersion(ctx context.Context, client *iam.Client, policyArn stri
 	}
 	return nil
 }
+
+// upload a file to S3 bucket
+func UploadFileToS3Bucket(ctx context.Context, bucketName string, objectKey string, fileName string) () {}
