@@ -28,7 +28,7 @@ func CreateBucket(ctx context.Context,bucketName string, bucketRegion string) (b
 }
 
 // check if bucket exists
-func CheckIfBucketExists(ctx context.Context,bucketName string) (bool, error) {
+func CheckIfBucketExists(ctx context.Context, bucketName string) (bool, error) {
 	_, err := s3ClientSingleton.HeadBucket(ctx, &s3.HeadBucketInput{
 		Bucket: aws.String(bucketName),
 	})
