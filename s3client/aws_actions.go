@@ -66,7 +66,7 @@ func CheckIfPolicyExists(ctx context.Context, client *iam.Client, policyArn stri
 }
 
 // get policy version
-func GetPolicyVersion(ctx context.Context,client *iam.Client, policyArn string, policy *iam.GetPolicyOutput) (*iam.GetPolicyVersionOutput, error) {
+func GetPolicyVersion(ctx context.Context, client *iam.Client, policyArn string, policy *iam.GetPolicyOutput) (*iam.GetPolicyVersionOutput, error) {
 	policyVersion, err := client.GetPolicyVersion(ctx, &iam.GetPolicyVersionInput{
 		PolicyArn: &policyArn,
 		VersionId: policy.Policy.DefaultVersionId,
@@ -75,4 +75,17 @@ func GetPolicyVersion(ctx context.Context,client *iam.Client, policyArn string, 
 		return nil, fmt.Errorf("error retrieving policy version. %v", err)
 	}
 	return policyVersion, nil
+}
+
+// create new policy version
+func CreatePolicyVersion(ctx context.Context, client *iam.Client, policyArn string, modifiedPolicy []byte) error {
+	_, err := client.CreatePolicyVersion(ctx, &iam.CreatePolicyVersionInput{
+		PolicyArn: &policyArn,
+		PolicyDocument: aws.String(string(modifiedPolicy)),
+		SetAsDefault: *aws.Bool(true),
+	})
+	if err != nil {
+		return fmt.Errorf("error create policy version. %v", err)
+	}
+	return nil
 }
