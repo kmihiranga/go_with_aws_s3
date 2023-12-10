@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"mime/multipart"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/iam"
@@ -91,4 +92,14 @@ func CreatePolicyVersion(ctx context.Context, client *iam.Client, policyArn stri
 }
 
 // upload a file to S3 bucket
-func UploadFileToS3Bucket(ctx context.Context, bucketName string, objectKey string, fileName string) () {}
+func UploadFileToS3Bucket(ctx context.Context, bucketName string, objectKey string, fileData multipart.File) (bool, error) {
+	_, err := s3ClientSingleton.PutObject(context.TODO(), &s3.PutObjectInput{
+		Bucket: aws.String(bucketName),
+		Key: aws.String(objectKey),
+		Body: fileData,
+	})
+	if err != nil {
+		return false, fmt.Errorf("error uploading the object. %v", err)
+	}
+	return true, nil
+}

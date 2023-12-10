@@ -6,10 +6,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"net/http"
 	"net/url"
 	"os"
+	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/gorilla/mux"
 )
 
 var iamService = awsClient.GetS3ClientInstance().IAMClient
@@ -85,4 +88,49 @@ func main() {
 		}
 		log.Println("Created a new policy version")
 	}
+
+	r := mux.NewRouter()
+	r.HandleFunc("/aws_upload", uploadFileHandler).Methods("POST")
+	http.Handle("/", r)
+
+	srv := &http.Server{
+		Handler: r,
+		Addr: "127.0.0.1:3000",
+		WriteTimeout: 15 * time.Second,
+        ReadTimeout:  15 * time.Second,
+	}
+	log.Fatal(srv.ListenAndServe())
+}
+
+func uploadFileHandler(w http.ResponseWriter, r *http.Request) {
+	// maximum upload size
+	const maxUploadSize = 10 * 1024 * 1024 // 10 MB
+
+	if r.Method != "POST" {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// parse the multipart form
+	if err := r.ParseMultipartForm(maxUploadSize); err != nil {
+		http.Error(w, "file too large", http.StatusBadRequest)
+		return
+	}
+
+	// retrieve the file name from form data
+	file, header, err := r.FormFile("file")
+	if err != nil {
+		http.Error(w, "invalid file", http.StatusBadRequest)
+		return
+	}
+	defer file.Close()
+
+	filename := header.Filename
+
+	_, errUploadFile := awsClient.UploadFileToS3Bucket(context.TODO(), os.Getenv("AWS_BUCKET_NAME"), filename, file)
+	if errUploadFile != nil {
+		http.Error(w, "error uploading file", http.StatusBadRequest)
+		return
+	}
+	log.Println("file uploaded successfully!")
 }
