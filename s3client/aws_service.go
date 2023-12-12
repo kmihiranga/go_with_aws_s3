@@ -17,6 +17,7 @@ import (
 type S3ClientSingleton struct {
 	Client *s3.Client
 	IAMClient *iam.Client
+	PreSignedClient *s3.PresignClient
 }
 
 var instance *S3ClientSingleton
@@ -39,9 +40,11 @@ func GetS3ClientInstance() *S3ClientSingleton {
 		if err != nil {
 			panic(err)
 		}
+		s3Client := s3.NewFromConfig(cfg)
 		instance = &S3ClientSingleton{
-			Client: s3.NewFromConfig(cfg),
+			Client: s3Client,
 			IAMClient: iam.NewFromConfig(cfg),
+			PreSignedClient: s3.NewPresignClient(s3Client),
 		}
 		log.Println("AWS S3 initialized")
 	})

@@ -91,6 +91,8 @@ func main() {
 
 	r := mux.NewRouter()
 	r.HandleFunc("/aws_upload", uploadFileHandler).Methods("POST")
+	r.HandleFunc("/aws_presigned_url", generatePreSignedUrl).Methods("POST")
+	r.HandleFunc("/aws_delete_object", deleteObjectFromS3Bucket).Methods("DELETE")
 	http.Handle("/", r)
 
 	srv := &http.Server{
@@ -133,4 +135,39 @@ func uploadFileHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	log.Println("file uploaded successfully!")
+}
+
+func generatePreSignedUrl(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "POST" {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	generatedUrl, err := awsClient.GeneratePreSignedURLToRetrieveObject(context.TODO(), os.Getenv("AWS_BUCKET_NAME"), "test_image.png")
+	if err != nil {
+		http.Error(w, "error retrieve pre signed url", http.StatusBadRequest)
+		return
+	}
+	log.Println(generatedUrl)
+	_, _ = w.Write([]byte(fmt.Sprintf("Generated presigned url: %v", generatedUrl)))
+}
+
+func deleteObjectFromS3Bucket(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "DELETE" {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	_, err := awsClient.DeleteObjectFromS3Bucket(context.TODO(), os.Getenv("AWS_BUCKET_NAME"), "test_image.png")
+	if err != nil {
+		http.Error(w, "error deleting object from bucket", http.StatusBadRequest)
+		return
+	}
+
+	_, errCheckingObject := awsClient.CheckIfObjectExistsS3Bucket(context.TODO(), os.Getenv("AWS_BUCKET_NAME"), "test_image.png")
+	if errCheckingObject != nil {
+		http.Error(w, "error checking existing object from bucket.", http.StatusBadRequest)
+		return
+	}
+	log.Println("Object deleted successfully!")
 }

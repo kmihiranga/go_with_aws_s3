@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"mime/multipart"
+	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/iam"
@@ -13,6 +14,7 @@ import (
 )
 
 var s3ClientSingleton = GetS3ClientInstance().Client
+var s3PreSignedClient = GetS3ClientInstance().PreSignedClient
 
 // create a new bucket
 func CreateBucket(ctx context.Context,bucketName string, bucketRegion string) (bool, error) {
@@ -100,6 +102,46 @@ func UploadFileToS3Bucket(ctx context.Context, bucketName string, objectKey stri
 	})
 	if err != nil {
 		return false, fmt.Errorf("error uploading the object. %v", err)
+	}
+	return true, nil
+}
+
+// generate pre signed url for get an object
+func GeneratePreSignedURLToRetrieveObject(ctx context.Context, bucketName string, objectKey string) (string, error) {
+	preSignedUrl, err := s3PreSignedClient.PresignGetObject(ctx, &s3.GetObjectInput{
+		Bucket: aws.String(bucketName),
+		Key: aws.String(objectKey),
+	}, s3.WithPresignExpires(15 * time.Minute))
+	if err != nil {
+		return "", fmt.Errorf("error creating presigned url. %v", err)
+	}
+	return preSignedUrl.URL, nil
+}
+
+// delete an object from S3 bucket
+func DeleteObjectFromS3Bucket(ctx context.Context, bucketName string, objectKey string) (bool, error) {
+	_, err := s3ClientSingleton.DeleteObject(ctx, &s3.DeleteObjectInput{
+		Bucket: aws.String(bucketName),
+		Key: aws.String(objectKey),
+	})
+	if err != nil {
+		return false, fmt.Errorf("error deleting object from bucket %v. %v", bucketName, err)
+	}
+	return true, nil
+}
+
+// check if object exists inside a bucket
+func CheckIfObjectExistsS3Bucket(ctx context.Context, bucketName string, objectKey string) (bool, error) {
+	_, err := s3ClientSingleton.HeadObject(ctx, &s3.HeadObjectInput{
+		Bucket: aws.String(bucketName),
+		Key: aws.String(objectKey),
+	})
+	if err != nil {
+		var bucketNotFound *types.NotFound
+		if errors.As(err, &bucketNotFound) {
+			return true, nil
+		}
+		return false, fmt.Errorf("error retrieving object from bucket %v. %v", bucketName, err)
 	}
 	return true, nil
 }
