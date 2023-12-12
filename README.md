@@ -21,7 +21,7 @@
 * for upload an object (POST request)
     ```bash
         curl --location 'http://localhost:3000/aws_upload' \
-        --form 'file=@"/images//test_image.png"'
+        --form 'file=@"/images/test_image.png"'
     ```
 
 * To get presigned url (POST request)
