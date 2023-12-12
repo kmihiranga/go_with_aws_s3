@@ -16,8 +16,14 @@ import (
 var s3ClientSingleton = GetS3ClientInstance().Client
 var s3PreSignedClient = GetS3ClientInstance().PreSignedClient
 
-// create a new bucket
-func CreateBucket(ctx context.Context,bucketName string, bucketRegion string) (bool, error) {
+/**
+  * CreateBucket | create a new bucket
+  * @params ctx | context.TODO()
+  * @params bucketName | bucket name
+  * @params bucketRegion | region of the bucket
+  * @returns bool, error
+*/
+func CreateBucket(ctx context.Context, bucketName string, bucketRegion string) (bool, error) {
 	_, err := s3ClientSingleton.CreateBucket(ctx, &s3.CreateBucketInput{
 		Bucket: aws.String(bucketName),
 		CreateBucketConfiguration: &types.CreateBucketConfiguration{
@@ -30,7 +36,12 @@ func CreateBucket(ctx context.Context,bucketName string, bucketRegion string) (b
 	return true, nil
 }
 
-// check if bucket exists
+/**
+  * CheckIfBucketExists | check if bucket exists
+  * @params ctx | context.TODO()
+  * @params bucketName | bucket name
+  * @returns bool, error
+*/
 func CheckIfBucketExists(ctx context.Context, bucketName string) (bool, error) {
 	_, err := s3ClientSingleton.HeadBucket(ctx, &s3.HeadBucketInput{
 		Bucket: aws.String(bucketName),
@@ -45,8 +56,13 @@ func CheckIfBucketExists(ctx context.Context, bucketName string) (bool, error) {
 	return true, nil
 }
 
-// list bucket objects
-func ListBucketObjects(ctx context.Context,bucketName string) (*s3.ListObjectsV2Output, error) {
+/**
+  * ListBucketObjects | list bucket objects
+  * @params ctx | context.TODO()
+  * @params bucketName | bucket name
+  * @returns *s3.ListObjectsV2Output, error
+*/
+func ListBucketObjects(ctx context.Context, bucketName string) (*s3.ListObjectsV2Output, error) {
 	output, err := s3ClientSingleton.ListObjectsV2(ctx, &s3.ListObjectsV2Input{
 		Bucket: aws.String(bucketName),
 	})
@@ -56,7 +72,13 @@ func ListBucketObjects(ctx context.Context,bucketName string) (*s3.ListObjectsV2
 	return output, nil
 }
 
-// check if policy exists
+/**
+  * CheckIfPolicyExists | check if policy exists
+  * @params ctx | context.TODO()
+  * @params client | *iam.Client
+  * @params policyArn | pass your aws policy arn value
+  * @returns *iam.GetPolicyOutput, error
+*/
 func CheckIfPolicyExists(ctx context.Context, client *iam.Client, policyArn string) (*iam.GetPolicyOutput, error) {
 	policy, err := client.GetPolicy(ctx, &iam.GetPolicyInput{
 		PolicyArn: aws.String(policyArn),
@@ -68,7 +90,13 @@ func CheckIfPolicyExists(ctx context.Context, client *iam.Client, policyArn stri
 	return policy, nil
 }
 
-// get policy version
+/**
+  * GetPolicyVersion | get policy version
+  * @params ctx | context.TODO()
+  * @params client | *iam.Client
+  * @params policy | output of the policy (*iam.GetPolicyOutput)
+  * @returns *iam.GetPolicyVersionOutput, error
+*/
 func GetPolicyVersion(ctx context.Context, client *iam.Client, policyArn string, policy *iam.GetPolicyOutput) (*iam.GetPolicyVersionOutput, error) {
 	policyVersion, err := client.GetPolicyVersion(ctx, &iam.GetPolicyVersionInput{
 		PolicyArn: &policyArn,
@@ -80,12 +108,19 @@ func GetPolicyVersion(ctx context.Context, client *iam.Client, policyArn string,
 	return policyVersion, nil
 }
 
-// create new policy version
+/**
+  * CreatePolicyVersion | create new policy version
+  * @params ctx | context.TODO()
+  * @params client | *iam.Client
+  * @params policyArn | pass your aws policy arn value
+  * @params modifiedPolicy | add your modified policy after include resources
+  * @returns error
+*/
 func CreatePolicyVersion(ctx context.Context, client *iam.Client, policyArn string, modifiedPolicy []byte) error {
 	_, err := client.CreatePolicyVersion(ctx, &iam.CreatePolicyVersionInput{
-		PolicyArn: &policyArn,
+		PolicyArn:      &policyArn,
 		PolicyDocument: aws.String(string(modifiedPolicy)),
-		SetAsDefault: *aws.Bool(true),
+		SetAsDefault:   *aws.Bool(true),
 	})
 	if err != nil {
 		return fmt.Errorf("error create policy version. %v", err)
@@ -93,12 +128,18 @@ func CreatePolicyVersion(ctx context.Context, client *iam.Client, policyArn stri
 	return nil
 }
 
-// upload a file to S3 bucket
+/**
+  * UploadFileToS3Bucket | upload a file to S3 bucket
+  * @params bucketName | name of the aws bucket
+  * @params objectKey | name of the object (use unique name to your object. Incase it will replace with old one)
+  * @params fileData | uploading file
+  * @returns bool, error
+*/
 func UploadFileToS3Bucket(ctx context.Context, bucketName string, objectKey string, fileData multipart.File) (bool, error) {
 	_, err := s3ClientSingleton.PutObject(context.TODO(), &s3.PutObjectInput{
 		Bucket: aws.String(bucketName),
-		Key: aws.String(objectKey),
-		Body: fileData,
+		Key:    aws.String(objectKey),
+		Body:   fileData,
 	})
 	if err != nil {
 		return false, fmt.Errorf("error uploading the object. %v", err)
@@ -106,23 +147,35 @@ func UploadFileToS3Bucket(ctx context.Context, bucketName string, objectKey stri
 	return true, nil
 }
 
-// generate pre signed url for get an object
+/**
+  * GeneratePreSignedURLToRetrieveObject | generate pre signed url for get an object
+  * @params ctx | context.TODO()
+  * @params bucketName | name of the aws bucket
+  * @params objectKey | name of the object (use unique name to your object. Incase it will replace with old one)
+  * @returns string, error
+*/
 func GeneratePreSignedURLToRetrieveObject(ctx context.Context, bucketName string, objectKey string) (string, error) {
 	preSignedUrl, err := s3PreSignedClient.PresignGetObject(ctx, &s3.GetObjectInput{
 		Bucket: aws.String(bucketName),
-		Key: aws.String(objectKey),
-	}, s3.WithPresignExpires(15 * time.Minute))
+		Key:    aws.String(objectKey),
+	}, s3.WithPresignExpires(15*time.Minute))
 	if err != nil {
 		return "", fmt.Errorf("error creating presigned url. %v", err)
 	}
 	return preSignedUrl.URL, nil
 }
 
-// delete an object from S3 bucket
+/**
+  * DeleteObjectFromS3Bucket | delete an object from S3 bucket
+  * @params ctx | context.TODO()
+  * @params bucketName | name of the aws bucket
+  * @params objectKey | name of the object (use unique name to your object. Incase it will replace with old one)
+  * @returns bool, error
+*/
 func DeleteObjectFromS3Bucket(ctx context.Context, bucketName string, objectKey string) (bool, error) {
 	_, err := s3ClientSingleton.DeleteObject(ctx, &s3.DeleteObjectInput{
 		Bucket: aws.String(bucketName),
-		Key: aws.String(objectKey),
+		Key:    aws.String(objectKey),
 	})
 	if err != nil {
 		return false, fmt.Errorf("error deleting object from bucket %v. %v", bucketName, err)
@@ -130,11 +183,17 @@ func DeleteObjectFromS3Bucket(ctx context.Context, bucketName string, objectKey 
 	return true, nil
 }
 
-// check if object exists inside a bucket
+/**
+  * CheckIfObjectExistsS3Bucket | check if object exists inside a bucket
+  * @params ctx | context.TODO()
+  * @params bucketName | name of the aws bucket
+  * @params objectKey | name of the object (use unique name to your object. Incase it will replace with old one)
+  * @returns bool, error
+*/
 func CheckIfObjectExistsS3Bucket(ctx context.Context, bucketName string, objectKey string) (bool, error) {
 	_, err := s3ClientSingleton.HeadObject(ctx, &s3.HeadObjectInput{
 		Bucket: aws.String(bucketName),
-		Key: aws.String(objectKey),
+		Key:    aws.String(objectKey),
 	})
 	if err != nil {
 		var bucketNotFound *types.NotFound
